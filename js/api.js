@@ -17,6 +17,7 @@ export const householdOf = async (uid) => ok(await sb.from('members').select('ho
 export const checks = {
   list: (hid) => sb.from('debt_checks').select('id, provider, title, total, overdue, due, next_bill, paid, created_at')
     .eq('household_id', hid).order('created_at', { ascending: false }).limit(60).then(ok),
+  addManual: (row) => sb.from('debt_checks').insert(row).then(ok),
   markPaid: (id) => sb.from('debt_checks').update({ paid: true }).eq('id', id).then(ok),
 };
 

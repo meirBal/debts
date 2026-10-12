@@ -23,7 +23,8 @@ const q = (rows) => { const c = { rows, eq: (k, v) => (c.rows = c.rows.filter((r
 export const createClient = () => ({
   auth: { getSession: async () => ({ data: { session: db.session } }), signOut: async () => { db.session = null; },
     signInWithPassword: async ({ password }) => password === 'pw12345678' ? (db.session = { user: { id: 'u1' } }, { data: {}, error: null }) : { data: null, error: new Error('x') } },
-  from: (t) => t === 'members' ? q([{ user_id: 'u1', household_id: 'h1' }]) : q(db.rows),
+  from: (t) => t === 'members' ? q([{ user_id: 'u1', household_id: 'h1' }])
+    : Object.assign(q(db.rows), { insert: (row) => { db.rows.unshift({ id: 'm' + db.rows.length, paid: false, created_at: new Date().toISOString(), ...row }); return Promise.resolve({ data: null, error: null }); } }),
   functions: { invoke: async (name, { body }) => {
     if (body.op === 'start') return { data: { flow: { st: 's', fid: 'f' }, via: 'sms' }, error: null };
     if (body.code !== '111111') return { data: null, error: { context: { status: 400, json: async () => ({ error: 'הקוד שגוי — נסו שוב' }) } } };
@@ -46,7 +47,7 @@ await step('login with HomeApp account', async () => {
   await page.locator('input[type=email]').fill('a@b.c'); await page.locator('input[type=password]').fill('bad');
   await page.getByRole('button', { name: 'כניסה' }).click(); await page.getByText('מייל או סיסמה שגויים').waitFor();
   await page.locator('input[type=password]').fill('pw12345678'); await page.getByRole('button', { name: 'כניסה' }).click();
-  await page.getByText('כדאי לבדוק עכשיו: חשמל').waitFor();
+  await page.getByText('כדאי לבדוק עכשיו: חשמל, מים, ארנונה, שכר לימוד').waitFor();
 });
 await step('ID check digit blocks a typo before any SMS', async () => {
   await page.getByRole('button', { name: 'בדוק חשמל' }).click();
@@ -68,6 +69,20 @@ await step('mark paid', async () => {
   await page.locator('.item .chip.ok', { hasText: 'שולם' }).waitFor();
   await page.locator('.item .chip', { hasText: 'חשבון הבא בערך' }).waitFor();
   if (/\bfalse\b|undefined/.test(await page.locator('#app').innerText())) throw new Error('stray false/undefined on screen');
+});
+await step('manual provider: direct payment link + record debt', async () => {
+  const pay = await page.getByRole('link', { name: 'לתשלום מים' }).getAttribute('href');
+  if (pay !== 'https://mei-ashkelon.co.il/?id=48') throw new Error(pay);
+  await page.getByRole('button', { name: 'עדכון מים' }).click();
+  await page.locator('dialog input[type=number]').fill('120.5');
+  await page.locator('dialog input[type=date]').fill('2026-11-05');
+  await page.getByRole('button', { name: 'שמירה' }).click();
+  await page.getByText('מים: נרשם חוב').waitFor();
+  const r = await page.evaluate(() => window.__db.rows.find((x) => x.provider === 'water'));
+  if (r.total !== 120.5 || r.due !== '2026-11-05' || r.overdue !== 0) throw new Error(JSON.stringify(r));
+  await page.getByRole('button', { name: 'עדכון ארנונה' }).click();
+  await page.getByRole('button', { name: 'אין חוב ✓' }).click();
+  await page.getByText('ארנונה: אין חוב ✓').waitFor();
 });
 await step('calendar reminder links', async () => {
   const g = await page.getByRole('link', { name: 'יומן Google (אנדרואיד)' }).getAttribute('href');

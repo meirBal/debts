@@ -17,9 +17,10 @@ GitHub Pages + Supabase Free (אותו פרויקט וחשבון כמו ניהו
 | `tests/` | `node tests/logic.test.mjs` · `node tests/smoke.mjs` (דפדפן) · `deno run -A --node-modules-dir=none tests/function.test.ts ../supabase/functions/debts/index.ts` |
 | `scripts/` | `release.sh X.Y.Z "הערה"` · `rollback.sh X.Y.Z` (ענפי `release/vX.Y.Z`) |
 
-## ספק חדש
-1. בשרת: אובייקט `Provider` (`start` שולח קוד, `verify` מחזיר `{total, items}`) ב-`PROVIDERS`.
-2. בטלפון: שורה ב-`PROVIDERS` שב-`js/providers.js`.
+## ספקים
+- **חשמל** — אוטומטי: השרת מתחבר עם קוד חד-פעמי (ספרייה פתוחה py-iec-api).
+- **מים (מי אשקלון), ארנונה (עיריית אשקלון), שכר לימוד (HIT)** — ידני: קישור ישיר לדף התשלום/האזור האישי הרשמי, ורישום התוצאה באפליקציה (מותר רק לספקים האלה — `sql/004`).
+- ספק ידני חדש: שורה ב-`PROVIDERS` שב-`js/providers.js` + הוספת המזהה ל-`dc_manual` במיגרציה חדשה.
 
 ## פרטיות ואבטחה
 - ת"ז, קוד וטוקן של הספק לא נשמרים ולא נכתבים ללוג. נשמרת רק התוצאה (`debt_checks`, רק בני המשפחה רואים).

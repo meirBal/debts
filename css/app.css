@@ -33,6 +33,7 @@ button:disabled { opacity: .5; }
 .list { display: grid; gap: 8px; }
 .item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .item.late { border-color: var(--bad); }
+.item > strong { flex: 1 0 100%; }   /* provider name on its own line, chips and actions below */
 .chip { font-size: .82em; padding: 2px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--mute); white-space: nowrap; }
 .chip.bad { color: var(--bad); border-color: var(--bad); }
 .chip.warn { color: var(--warn); border-color: var(--warn); }

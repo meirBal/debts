@@ -1,5 +1,13 @@
 // ===== PROVIDERS & RULES — pure logic (unit-tested in tests/logic.test.mjs) =====
-export const PROVIDERS = [{ id: 'iec', title: 'חשמל', icon: '⚡' }];   // next: water (מי אשקלון), tuition (HIT)
+// auto: checked by the server with a one-time code. Others: user checks the official site and records the result.
+// Manual ids/titles must match sql/004 (policy) and sql/005 (titles).
+export const PROVIDERS = [
+  { id: 'iec', title: 'חשמל', icon: '⚡', auto: true, pay: 'https://www.iec.co.il/' },
+  { id: 'water', title: 'מים', icon: '💧', pay: 'https://mei-ashkelon.co.il/?id=48', area: 'https://www.mast.co.il/56/services' },
+  { id: 'arnona', title: 'ארנונה', icon: '🏛️', pay: 'https://www.ashkelon.muni.il/service/Pages/payments.aspx',
+    tip: 'אפשר לקבל כל חיוב ארנונה ישירות ב-bit: סורקים פעם אחת את קוד ה-QR שעל השובר.' },
+  { id: 'hit', title: 'שכר לימוד', icon: '🎓', pay: 'https://www.hit.ac.il/students/tuition/', area: 'https://portal.hit.ac.il/' },
+];
 export const CHECK_DAYS = 10;                                           // ≈3 checks a month
 export const REMIND_DAYS = [1, 11, 21];                                 // calendar reminders
 

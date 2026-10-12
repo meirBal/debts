@@ -5,12 +5,13 @@ import { PROVIDERS, CHECK_DAYS, REMIND_DAYS, validId, latest, status, attention,
 import { VERSION, APP_URL } from './config.js';
 
 const root = document.getElementById('app');
-const S = { hid: null };
+const S = { hid: null, uid: null };
 
 // ---- [Boot: session → family (HomeApp household) → main] ----
 async function boot() {
   const user = await auth.user();
   if (!user) return login();
+  S.uid = user.id;
   S.hid = await householdOf(user.id);
   if (!S.hid) return root.replaceChildren(h('div', { class: 'card' },
     h('h1', {}, '💰 בדיקת חובות'), h('p', {}, 'החשבון הזה עוד לא שייך למשפחה. היכנסו קודם לאפליקציית ניהול הבית והצטרפו למשק הבית.'),
@@ -59,7 +60,12 @@ async function render() {
         r && (st === 'late' || st === 'due') && h('button', { class: 'ghost', onclick: act(async () => {
           await checks.markPaid(r.id); toast('סומן כשולם'); await render();
         }) }, 'שילמתי'),
-        h('button', { 'aria-label': `בדוק ${p.title}`, onclick: () => askId(p) }, 'בדוק'));
+        h('div', { class: 'row' },
+          h('a', { class: 'btn ghost', href: p.pay, target: '_blank', rel: 'noopener', 'aria-label': `לתשלום ${p.title}` }, 'לתשלום ↗'),
+          p.area && h('a', { class: 'btn ghost', href: p.area, target: '_blank', rel: 'noopener', 'aria-label': `אזור אישי ${p.title}` }, 'אזור אישי ↗'),
+          p.auto ? h('button', { 'aria-label': `בדוק ${p.title}`, onclick: () => askId(p) }, 'בדוק')
+            : h('button', { 'aria-label': `עדכון ${p.title}`, onclick: () => askManual(p) }, 'עדכון')),
+        p.tip && h('p', { class: 'hint', style: 'width:100%;margin:0' }, p.tip));
     })),
 
     h('section', { class: 'card', style: 'margin-top: var(--gap)' }, h('h2', {}, 'היסטוריה'),
@@ -74,6 +80,27 @@ async function render() {
         h('a', { class: 'btn ghost', href: APP_URL.replace(/^https:/, 'webcal:') + 'reminders.ics' }, 'יומן אייפון'))),
     h('p', { class: 'hint' }, `גרסה ${VERSION} · מספר הזהות והקוד לא נשמרים בשרת · מומלץ לבדוק כל ${CHECK_DAYS} ימים`),
   ].filter(Boolean));
+}
+
+// ---- [Manual providers: record what the official site shows] ----
+function askManual(p) {
+  const now = today(), year = (n) => `${+now.slice(0, 4) + n}${now.slice(4)}`;
+  const amount = h('input', { type: 'number', inputMode: 'decimal', min: 0, step: '0.01', dir: 'ltr', required: true });
+  const due = h('input', { type: 'date', dir: 'ltr', min: year(-1), max: year(1) });
+  const save = async (total) => {
+    if (!(total >= 0) || total > 1e6) throw new Error('נא להזין סכום');
+    if (due.value && (due.value < due.min || due.value > due.max)) throw new Error('תאריך לא תקין');
+    const d2 = total > 0 && due.value ? due.value : null;
+    await checks.addManual({ household_id: S.hid, created_by: S.uid, provider: p.id, title: p.title, total,
+      overdue: d2 && d2 < now ? total : 0, due: d2 });                // past due date → overdue
+    d.close(); toast(total > 0 ? `${p.title}: נרשם חוב ${fmtMoney(total)}` : `${p.title}: אין חוב ✓`); await render();
+  };
+  const d = dialog(`${p.icon} עדכון ${p.title}`, h('div', { class: 'form' },
+    h('p', { class: 'hint' }, 'בדקו באתר הרשמי ורשמו כאן מה ראיתם.'),
+    h('label', {}, h('span', {}, 'סכום לתשלום (₪)'), amount),
+    h('label', {}, h('span', {}, 'לתשלום עד'), due)), [
+    h('button', { class: 'ghost', onclick: act(() => save(0)) }, 'אין חוב ✓'),
+    h('button', { onclick: act(() => save(amount.value === '' ? NaN : Math.round(+amount.value * 100) / 100)) }, 'שמירה')]);
 }
 
 // ---- [Check flow: ID → code sent → code (retry on typo) → result] ----
