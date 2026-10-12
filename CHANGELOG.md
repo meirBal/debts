@@ -1,3 +1,7 @@
+## 1.3.0 — 2026-10-12
+- Water payment: clearing and card numbers with a copy button before opening the payment page
+- previous: v1.2.2 (rollback: scripts/rollback.sh 1.2.2)
+
 ## 1.2.2 — 2026-10-12
 - Water payment link goes straight to the MAST payment page (Ashkelon)
 - previous: v1.2.1 (rollback: scripts/rollback.sh 1.2.1)
