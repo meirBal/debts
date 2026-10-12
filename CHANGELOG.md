@@ -1,3 +1,7 @@
+## 1.2.1 — 2026-10-12
+- Electricity payment link goes straight to IEC's bill payment page
+- previous: v1.2.0 (rollback: scripts/rollback.sh 1.2.0)
+
 ## 1.2.0 — 2026-10-12
 - Water, arnona and tuition: direct links to the official payment pages + quick manual update; payment link for electricity
 - previous: v1.1.0 (rollback: scripts/rollback.sh 1.1.0)
