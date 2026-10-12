@@ -86,18 +86,24 @@ async function render() {
 // ---- [Pay with reference numbers: copy, then open the official page] ----
 async function payWithRefs(p) {
   const saved = new Map((await refs.list(S.hid)).filter((r) => r.provider === p.id).map((r) => [r.k, r.value]));
+  const lkey = (k) => `debts.ref.${p.id}.${k}`;                         // local refs: this phone only, never the server
+  const local = { get: (k) => { try { return localStorage.getItem(lkey(k)) || store.get(); } catch { return ''; } },
+    set: (k, v) => { try { localStorage.setItem(lkey(k), v); } catch { /* private mode */ } } };
   const row = (ref) => {
-    const inp = h('input', { value: saved.get(ref.k) || '', inputMode: 'numeric', dir: 'ltr', maxLength: 40, 'aria-label': ref.label });
-    return h('label', {}, h('span', {}, ref.label), h('div', { class: 'row' }, h('div', { class: 'grow' }, inp),
-      h('button', { type: 'button', onclick: act(async () => {
-        const v = inp.value.trim();
-        if (!v) throw new Error('אין מספר להעתקה');
-        if (v !== saved.get(ref.k)) { await refs.set(S.hid, p.id, ref.k, v); saved.set(ref.k, v); }   // edited → saved for the family
-        await navigator.clipboard.writeText(v); toast(`הועתק: ${v}`);
-      }) }, 'העתק')));
+    const cur = ref.local ? local.get(ref.k) : saved.get(ref.k) || '';
+    const inp = h('input', { value: cur, inputMode: 'numeric', dir: 'ltr', maxLength: 40, 'aria-label': ref.label });
+    return h('label', {}, h('span', {}, ref.label + (ref.local ? ' (נשמר רק בטלפון הזה)' : '')),
+      h('div', { class: 'row' }, h('div', { class: 'grow' }, inp),
+        h('button', { type: 'button', onclick: act(async () => {
+          const v = inp.value.trim();
+          if (!v) throw new Error('אין מספר להעתקה');
+          if (ref.local) local.set(ref.k, v);
+          else if (v !== saved.get(ref.k)) { await refs.set(S.hid, p.id, ref.k, v); saved.set(ref.k, v); }   // edited → saved for the family
+          await navigator.clipboard.writeText(v); toast(`הועתק: ${v}`);
+        }) }, 'העתק')));
   };
   dialog(`${p.icon} תשלום ${p.title}`, h('div', { class: 'form' },
-    h('p', { class: 'hint' }, 'מעתיקים, ואז מדביקים באתר התשלום. מספר שהשתנה בחשבון — מתקנים כאן והוא נשמר.'),
+    h('p', { class: 'hint' }, 'מספרים קבועים שלא משתנים בין חשבונות: מעתיקים ומדביקים באתר התשלום.'),
     ...p.refs.map(row)), [
     h('a', { class: 'btn', href: p.pay, target: '_blank', rel: 'noopener' }, 'המשך לתשלום ↗')]);
 }

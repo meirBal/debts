@@ -4,7 +4,8 @@
 export const PROVIDERS = [
   { id: 'iec', title: 'חשמל', icon: '⚡', auto: true, pay: 'https://www.iec.co.il/payments/single' },
   { id: 'water', title: 'מים', icon: '💧', pay: 'https://www.mast.co.il/55/payment', area: 'https://www.mast.co.il/55/services',
-    refs: [{ k: 'clearing', label: "מס' מסלקה / ספח" }, { k: 'card', label: "מס' כרטיס מים" }] },   // shown with "copy" before paying
+    // stable numbers (same every bill). payer may equal an ID number → kept on this phone only (local)
+    refs: [{ k: 'payer', label: "מס' משלם", local: true }, { k: 'property', label: "מס' נכס" }, { k: 'card', label: "מס' כרטיס מים" }] },
   { id: 'arnona', title: 'ארנונה', icon: '🏛️', pay: 'https://www.ashkelon.muni.il/service/Pages/payments.aspx',
     tip: 'אפשר לקבל כל חיוב ארנונה ישירות ב-bit: סורקים פעם אחת את קוד ה-QR שעל השובר.' },
   { id: 'hit', title: 'שכר לימוד', icon: '🎓', pay: 'https://www.hit.ac.il/students/tuition/', area: 'https://portal.hit.ac.il/' },

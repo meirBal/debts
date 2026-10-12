@@ -24,7 +24,7 @@ export const createClient = () => ({
   auth: { getSession: async () => ({ data: { session: db.session } }), signOut: async () => { db.session = null; },
     signInWithPassword: async ({ password }) => password === 'pw12345678' ? (db.session = { user: { id: 'u1' } }, { data: {}, error: null }) : { data: null, error: new Error('x') } },
   from: (t) => t === 'members' ? q([{ user_id: 'u1', household_id: 'h1' }])
-    : t === 'debt_refs' ? Object.assign(q([{ household_id: 'h1', provider: 'water', k: 'clearing', value: '111222333' }]), { upsert: (r) => { (db.refs ||= []).push(r); return Promise.resolve({ data: null, error: null }); } })
+    : t === 'debt_refs' ? Object.assign(q([{ household_id: 'h1', provider: 'water', k: 'property', value: '111222333' }]), { upsert: (r) => { (db.refs ||= []).push(r); return Promise.resolve({ data: null, error: null }); } })
     : Object.assign(q(db.rows), { insert: (row) => { db.rows.unshift({ id: 'm' + db.rows.length, paid: false, created_at: new Date().toISOString(), ...row }); return Promise.resolve({ data: null, error: null }); } }),
   functions: { invoke: async (name, { body }) => {
     if (body.op === 'start') return { data: { flow: { st: 's', fid: 'f' }, via: 'sms' }, error: null };
@@ -74,8 +74,12 @@ await step('mark paid', async () => {
 await step('manual provider: direct payment link + record debt', async () => {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.getByRole('button', { name: 'לתשלום מים' }).click();
-  await page.getByRole('button', { name: 'העתק' }).first().click();
+  await page.getByRole('button', { name: 'העתק' }).nth(1).click();
   if (await page.evaluate(() => navigator.clipboard.readText()) !== '111222333') throw new Error('copy failed');
+  await page.getByRole('textbox', { name: "מס' משלם" }).fill('999');
+  await page.getByRole('button', { name: 'העתק' }).first().click();
+  const leaked = await page.evaluate(() => (window.__db.refs || []).some((r) => r.k === 'payer'));
+  if (await page.evaluate(() => localStorage.getItem('debts.ref.water.payer')) !== '999' || leaked) throw new Error('payer must stay on the phone');
   await page.getByRole('textbox', { name: "מס' כרטיס מים" }).fill('4455');
   await page.getByRole('button', { name: 'העתק' }).last().click();
   await page.getByText('הועתק: 4455').waitFor();
