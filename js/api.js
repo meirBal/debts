@@ -15,7 +15,7 @@ export const auth = {
 export const householdOf = async (uid) => ok(await sb.from('members').select('household_id').eq('user_id', uid).maybeSingle())?.household_id ?? null;
 
 export const checks = {
-  list: (hid) => sb.from('debt_checks').select('id, provider, title, total, overdue, due, paid, created_at')
+  list: (hid) => sb.from('debt_checks').select('id, provider, title, total, overdue, due, next_bill, paid, created_at')
     .eq('household_id', hid).order('created_at', { ascending: false }).limit(60).then(ok),
   markPaid: (id) => sb.from('debt_checks').update({ paid: true }).eq('id', id).then(ok),
 };

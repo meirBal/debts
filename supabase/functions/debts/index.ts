@@ -60,8 +60,9 @@ async function handle(req: Request) {
     household_id: hid, created_by: u.user.id, provider: b.provider, title: p.title, total: r.total, items: r.items,
     overdue: money(late.reduce((s, i) => s + i.overdue, 0)),
     due: r.items.filter((i) => i.debt > 0).map((i) => i.due).filter(Boolean).sort()[0] ?? null,
+    next_bill: r.items.map((i) => i.nextBill).filter(Boolean).sort()[0] ?? null,
   };
-  const { data, error } = await admin.from('debt_checks').insert(row).select('id, provider, title, total, overdue, due, paid, created_at').single();
+  const { data, error } = await admin.from('debt_checks').insert(row).select('id, provider, title, total, overdue, due, next_bill, paid, created_at').single();
   if (error) throw error;
   return json(data);
 }
@@ -70,7 +71,7 @@ async function handle(req: Request) {
 const validId = (id: string) => /^\d{5,9}$/.test(id) && [...id.padStart(9, '0')]
   .reduce((s, d, i) => { const x = +d * (i % 2 + 1); return s + (x > 9 ? x - 9 : x); }, 0) % 10 === 0;
 
-type Item = { name: string; debt: number; overdue: number; due: string | null };
+type Item = { name: string; debt: number; overdue: number; due: string | null; lastBill?: { date: string; amount: number } | null; nextBill?: string | null };
 type Provider = {
   title: string;
   start(id: string, sig: AbortSignal): Promise<{ flow: Record<string, string>; via: string }>;
@@ -109,6 +110,10 @@ const deEscape = (s: string) => s.replace(/\\x([0-9a-f]{2})/gi, (_, x) => String
   .replace(/&#x([0-9a-f]+);/gi, (_, x) => String.fromCharCode(parseInt(x, 16)));
 const date = (d: unknown) => (typeof d === 'string' && /^2\d{3}-\d{2}-\d{2}/.test(d) ? d.slice(0, 10) : null);   // IEC sends 1900-01-01 for "none"
 const money = (n: unknown) => Math.round((+(n as number) || 0) * 100) / 100;
+const addMonths = (d: string, m: number) => {                       // month-end safe: Jan 31 + 1 → Feb 28/29
+  const [y, mo, day] = d.split('-').map(Number), last = new Date(Date.UTC(y, mo - 1 + m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, mo - 1 + m, Math.min(day, last))).toISOString().slice(0, 10);
+};
 
 // ---- [Provider: IEC electricity — Okta OTP → PKCE → id_token → contracts.totalDebt] ----
 // Port of github.com/GuyKh/py-iec-api (login.py, data.py, const.py).
@@ -160,15 +165,27 @@ const iec: Provider = {
     if (!bp) throw new Error('customer: no bpNumber');
     const cs = unwrap(await call(`${IEC.api}customer/contract/${encodeURIComponent(bp)}`, auth, sig), 'contracts');
     if (!Array.isArray(cs.contracts)) throw new Error('contracts: missing');
-    const items = cs.contracts.filter((c: any) => c.status === 1 || +c.totalDebt > 0).map((c: any) => {
-      const debt = money(c.totalDebt);
+    const items = await Promise.all(cs.contracts.filter((c: any) => c.status === 1 || +c.totalDebt > 0).map(async (c: any) => {
+      const debt = money(c.totalDebt), lastBill = c.status === 1 ? await lastInvoice(c.contractId, bp, auth, sig) : null;
       return {
         name: c.address || [c.streetName, c.houseNumber, c.cityName].filter(Boolean).join(' ') || `חוזה …${String(c.contractId).slice(-4)}`,
         debt, overdue: Math.max(0, money(debt - money(c.debtForInvoicesDueDateNotPassed))), due: date(c.dueDate),
+        lastBill, nextBill: lastBill ? addMonths(lastBill.date, [1, 2].includes(+c.frequency) ? +c.frequency : 2) : null,   // monthly or bi-monthly bills
       };
-    });
+    }));
     return { total: money(items.reduce((s: number, i: Item) => s + i.debt, 0)), items };
   },
 };
+
+// newest bill of a contract (kept for later analysis + "next bill ≈"); optional — any failure here → null, the debt check goes on
+async function lastInvoice(contract: string, bp: string, auth: RequestInit, sig: AbortSignal) {
+  try {
+    const own = AbortSignal.any([sig, AbortSignal.timeout(5000)]);   // never eats the whole request budget
+    const d = unwrap(await call(`${IEC.api}BillingCollection/invoices/${encodeURIComponent(contract)}/${encodeURIComponent(bp)}`, auth, own), 'invoices');
+    const last = (d.invoices ?? []).map((i: any) => ({ date: date(i.fullDate), amount: money(i.amountOrigin) }))
+      .filter((i: any) => i.date).sort((a: any, b: any) => (a.date < b.date ? 1 : -1))[0];
+    return last ?? null;
+  } catch { return null; }
+}
 
 const PROVIDERS: Record<string, Provider> = { iec };

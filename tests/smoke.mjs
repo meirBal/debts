@@ -27,7 +27,7 @@ export const createClient = () => ({
   functions: { invoke: async (name, { body }) => {
     if (body.op === 'start') return { data: { flow: { st: 's', fid: 'f' }, via: 'sms' }, error: null };
     if (body.code !== '111111') return { data: null, error: { context: { status: 400, json: async () => ({ error: 'הקוד שגוי — נסו שוב' }) } } };
-    const row = { id: 'd1', household_id: 'h1', provider: 'iec', title: 'חשמל', total: 245.3, overdue: 100, due: '2026-10-20', paid: false, created_at: new Date().toISOString() };
+    const row = { id: 'd1', household_id: 'h1', provider: 'iec', title: 'חשמל', total: 245.3, overdue: 100, due: '2026-10-20', next_bill: '2099-01-01', paid: false, created_at: new Date().toISOString() };
     db.rows.unshift(row); return { data: row, error: null };
   } },
 });`;
@@ -66,6 +66,7 @@ await step('mark paid', async () => {
   await page.getByRole('button', { name: 'שילמתי' }).click(); await page.getByText('סומן כשולם').waitFor();
   if (!(await page.evaluate(() => window.__db.rows[0].paid))) throw new Error('not paid');
   await page.locator('.item .chip.ok', { hasText: 'שולם' }).waitFor();
+  await page.locator('.item .chip', { hasText: 'חשבון הבא בערך' }).waitFor();
   if (/\bfalse\b|undefined/.test(await page.locator('#app').innerText())) throw new Error('stray false/undefined on screen');
 });
 await step('calendar reminder links', async () => {

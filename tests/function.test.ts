@@ -21,6 +21,9 @@ globalThis.fetch = async (u: any, init: any = {}) => {
   if (url.pathname.endsWith('/token')) { if (new URLSearchParams(body).get('code') !== 'ab-cd') return J({}, 400); return J({ id_token: 'idt' }); }
   if (url.pathname === '/api/customer') return J({ bpNumber: '42' });
   if (url.pathname === '/api/customer/contract/42') return J(contractsBody);
+  if (url.pathname === '/api/BillingCollection/invoices/9991234/42') return J({ data: { invoices: [
+    { fullDate: '2026-08-31T00:00:00', amountOrigin: 410.5 }, { fullDate: '2026-06-01T00:00:00', amountOrigin: 380 }] }, reponseDescriptor: { isSuccess: true } });
+  if (url.pathname.startsWith('/api/BillingCollection/')) return J({ errorCode: 'E0000011' }, 403);   // optional call failing must not break the check
   throw new Error('net fail ' + url);
 };
 await import(Deno.args[0]);
@@ -39,10 +42,11 @@ assert(s === 400 && r.error === 'הקוד שגוי — נסו שוב', 'wrong co
 [s, r] = await call({ op: 'verify', provider: 'iec', flow, code: '333333' });
 assert(s === 400 && /התחילו שוב/.test(r.error), 'expired code → start over');
 contractsBody = { data: { contracts: [
-  { contractId: '9991234', address: 'הרצל 1 אשקלון', totalDebt: 300.456, debtForInvoicesDueDateNotPassed: 100, dueDate: '2026-10-20T00:00:00', status: 1 },
+  { contractId: '9991234', address: 'הרצל 1 אשקלון', totalDebt: 300.456, debtForInvoicesDueDateNotPassed: 100, dueDate: '2026-10-20T00:00:00', status: 1, frequency: 2 },
+  { contractId: '9997777', totalDebt: 0, debtForInvoicesDueDateNotPassed: 0, dueDate: '1900-01-01T00:00:00', status: 1 },
   { contractId: '9995678', totalDebt: 0, debtForInvoicesDueDateNotPassed: 0, dueDate: '1900-01-01T00:00:00', status: 0 }] }, reponseDescriptor: { isSuccess: true } };
 [s, r] = await call({ op: 'verify', provider: 'iec', flow, code: '111111' });
-assert(s === 200 && r.total === 300.46 && r.overdue === 200.46 && r.due === '2026-10-20' && r.items.length === 1 && r.provider === 'iec', 'debt parsed: total, overdue, due, inactive contract dropped');
+assert(s === 200 && r.total === 300.46 && r.overdue === 200.46 && r.due === '2026-10-20' && r.items.length === 2 && r.provider === 'iec' && r.next_bill === '2026-10-31' && r.items[0].lastBill.amount === 410.5 && r.items[1].nextBill === null, 'debt parsed: total, overdue, due, next bill, inactive dropped, failed invoices tolerated');
 contractsBody = { data: null, reponseDescriptor: { isSuccess: false } };
 [s, r] = await call({ op: 'verify', provider: 'iec', flow, code: '111111' });
 assert(s === 502 && saved.length === 1, 'failed IEC answer is an error, never saved as "no debt"');

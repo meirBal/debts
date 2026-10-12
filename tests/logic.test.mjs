@@ -1,6 +1,6 @@
 // Unit tests for js/providers.js. usage: node tests/logic.test.mjs
 import fs from 'node:fs';
-import { validId, status, attention, googleCalendarUrl } from '../js/providers.js';
+import { validId, status, attention, nextBill, googleCalendarUrl } from '../js/providers.js';
 let bad = 0;
 const eq = (got, want, label) => { if (got !== want) { bad++; console.log('✗', label, got, '≠', want); } };
 eq(validId('123456782'), true, 'valid id'); eq(validId('123456789'), false, 'bad check digit'); eq(validId('12a'), false, 'not digits');
@@ -14,6 +14,10 @@ eq(attention([iec({})], T).length, 0, 'fresh');
 eq(attention([iec({ created_at: ago(10) })], T).length, 1, 'stale');
 eq(attention([iec({ total: 9 })], T).length, 1, 'unpaid');
 eq(attention([iec({ total: 9, overdue: 9, paid: true }), iec({ created_at: ago(40) })], T).length, 0, 'paid; newest wins');
+eq(nextBill({ total: 0, next_bill: '2026-12-01' }, '2026-10-12')?.date, '2026-12-01', 'next bill ahead');
+eq(nextBill({ total: 0, next_bill: '2026-10-01' }, '2026-10-12')?.soon, true, 'estimate passed → soon');
+eq(nextBill({ total: 50, overdue: 0, next_bill: '2026-12-01' }, '2026-10-12'), null, 'open debt: no next-bill chip');
+eq(nextBill({ total: 0, next_bill: '2026-08-01' }, '2026-10-12'), null, 'stale estimate hidden');
 const g = new URL(googleCalendarUrl('https://x/', new Date('2026-10-12T05:00:00Z'))).searchParams;
 eq(g.get('recur'), 'RRULE:FREQ=MONTHLY;BYMONTHDAY=1,11,21', 'google recur'); eq(g.get('dates'), '20261001T090000/20261001T091000', 'google dates');
 const ics = fs.readFileSync(new URL('../reminders.ics', import.meta.url), 'utf8');

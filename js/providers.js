@@ -17,6 +17,13 @@ export const latest = (rows) => {
 // state of one check: ok | paid | due (bill not yet due) | late (past due)
 export const status = (r) => (!r || !(r.total > 0) ? 'ok' : r.paid ? 'paid' : r.overdue > 0 ? 'late' : 'due');
 
+// estimated next bill, shown when nothing is owed: a date; "soon" up to 30 days after the estimate; then nothing
+export const nextBill = (r, todayIso) => {
+  if (!r?.next_bill || ['late', 'due'].includes(status(r))) return null;
+  if (r.next_bill > todayIso) return { soon: false, date: r.next_bill };
+  return (Date.parse(todayIso) - Date.parse(r.next_bill)) / 864e5 <= 30 ? { soon: true, date: r.next_bill } : null;
+};
+
 // providers to look at now: never checked, last check too old, or an unpaid debt
 export const attention = (rows, nowMs = Date.now()) => {
   const last = latest(rows);

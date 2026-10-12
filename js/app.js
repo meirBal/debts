@@ -1,7 +1,7 @@
 // ===== APP — login, providers, check flow (ID → code → result), history, reminders =====
 import { h, toast, act, dialog, fmtDate, fmtMoney } from './ui.js';
 import { auth, householdOf, checks, provider } from './api.js';
-import { PROVIDERS, CHECK_DAYS, REMIND_DAYS, validId, latest, status, attention, googleCalendarUrl } from './providers.js';
+import { PROVIDERS, CHECK_DAYS, REMIND_DAYS, validId, latest, status, attention, nextBill, googleCalendarUrl } from './providers.js';
 import { VERSION, APP_URL } from './config.js';
 
 const root = document.getElementById('app');
@@ -42,6 +42,8 @@ const LABEL = {
 };
 const chip = (r) => { const [t, c] = LABEL[status(r)](r); return h('span', { class: `chip ${c}` }, t); };
 const iconOf = (id) => PROVIDERS.find((p) => p.id === id)?.icon || '';
+const today = () => new Intl.DateTimeFormat('sv', { timeZone: 'Asia/Jerusalem' }).format(new Date());
+const nextChip = (r) => { const n = nextBill(r, today()); return n && h('span', { class: 'chip' }, n.soon ? 'חשבון חדש צפוי בקרוב' : `חשבון הבא בערך ${fmtDate(n.date)}`); };
 
 async function render() {
   const rows = await checks.list(S.hid), last = latest(rows), need = attention(rows);
@@ -53,7 +55,7 @@ async function render() {
       const r = last.get(p.id), st = status(r);
       return h('div', { class: `item${st === 'late' ? ' late' : ''}` },
         h('strong', { class: 'grow' }, `${p.icon} ${p.title}`),
-        r && chip(r), r && h('span', { class: 'chip' }, `נבדק ${fmtDate(r.created_at)}`),
+        r && chip(r), r && nextChip(r), r && h('span', { class: 'chip' }, `נבדק ${fmtDate(r.created_at)}`),
         r && (st === 'late' || st === 'due') && h('button', { class: 'ghost', onclick: act(async () => {
           await checks.markPaid(r.id); toast('סומן כשולם'); await render();
         }) }, 'שילמתי'),
