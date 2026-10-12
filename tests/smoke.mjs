@@ -72,7 +72,7 @@ await step('mark paid', async () => {
 });
 await step('manual provider: direct payment link + record debt', async () => {
   const pay = await page.getByRole('link', { name: 'לתשלום מים' }).getAttribute('href');
-  if (pay !== 'https://mei-ashkelon.co.il/?id=48') throw new Error(pay);
+  if (pay !== 'https://www.mast.co.il/55/payment') throw new Error(pay);
   await page.getByRole('button', { name: 'עדכון מים' }).click();
   await page.locator('dialog input[type=number]').fill('120.5');
   await page.locator('dialog input[type=date]').fill('2026-11-05');
