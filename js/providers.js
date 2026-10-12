@@ -2,7 +2,7 @@
 // auto: checked by the server with a one-time code. Others: user checks the official site and records the result.
 // Manual ids/titles must match sql/004 (policy) and sql/005 (titles).
 export const PROVIDERS = [
-  { id: 'iec', title: 'חשמל', icon: '⚡', auto: true, pay: 'https://www.iec.co.il/' },
+  { id: 'iec', title: 'חשמל', icon: '⚡', auto: true, pay: 'https://www.iec.co.il/payments/single' },
   { id: 'water', title: 'מים', icon: '💧', pay: 'https://mei-ashkelon.co.il/?id=48', area: 'https://www.mast.co.il/56/services' },
   { id: 'arnona', title: 'ארנונה', icon: '🏛️', pay: 'https://www.ashkelon.muni.il/service/Pages/payments.aspx',
     tip: 'אפשר לקבל כל חיוב ארנונה ישירות ב-bit: סורקים פעם אחת את קוד ה-QR שעל השובר.' },
