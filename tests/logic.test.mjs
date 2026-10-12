@@ -24,4 +24,6 @@ eq(g.get('recur'), 'RRULE:FREQ=MONTHLY;BYMONTHDAY=1,11,21', 'google recur'); eq(
 const ics = fs.readFileSync(new URL('../reminders.ics', import.meta.url), 'utf8');
 eq(/BEGIN:VTIMEZONE\r\nTZID:Asia\/Jerusalem/.test(ics) && /RRULE:FREQ=MONTHLY;BYMONTHDAY=1,11,21\r\n/.test(ics) && !/[^\r]\n/.test(ics), true, 'static ics: tz + rule + CRLF');
 eq(attention([], T).length, 4, 'all four providers listed when never checked');
+// service worker must at least parse (a syntax error silently kills offline + install)
+try { new (await import('node:vm')).Script(fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8')); } catch (e) { eq(e.message, '', 'sw.js parses'); }
 console.log(bad ? `${bad} failed` : 'all passed'); process.exit(bad ? 1 : 0);

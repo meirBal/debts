@@ -74,6 +74,7 @@ async function render() {
         h('span', { class: 'grow' }, `${iconOf(r.provider)} ${r.title} · ${fmtDate(r.created_at)}`), chip(r)))
         : [h('p', { class: 'hint' }, 'עוד לא נבדק')]))),
 
+    installCard(),
     h('section', { class: 'card' }, h('h2', {}, '⏰ תזכורות'),
       h('p', { class: 'hint' }, `תזכורת ביומן ב-${REMIND_DAYS.join(', ')} בכל חודש עם קישור לכאן (בלי שרת ובלי עלות).`),
       h('div', { class: 'row' },
@@ -166,6 +167,16 @@ function askCode(p, { flow, via }) {
   setTimeout(() => code.focus(), 50);
 }
 
-// ---- [PWA: offline shell; new version applies on next open] ----
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+// ---- [PWA: offline shell; install button (Android/Chrome) or iPhone instructions] ----
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((e) => console.error('sw', e));
+let installEvt = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; document.getElementById('install')?.removeAttribute('hidden'); });
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const installCard = () => standalone() ? null : h('section', { class: 'card' }, h('h2', {}, '📲 התקנה במסך הבית'),
+  isIos ? h('p', { class: 'hint' }, 'בספארי: כפתור השיתוף (ריבוע עם חץ) ← "הוספה למסך הבית".')
+    : h('p', { class: 'hint' }, 'אם הכפתור לא מופיע: תפריט ⋮ של Chrome ← "התקנת אפליקציה" / "הוספה למסך הבית".'),
+  h('button', { id: 'install', hidden: !installEvt, onclick: act(async () => {
+    installEvt.prompt(); await installEvt.userChoice; installEvt = null; await render();
+  }) }, 'התקנה'));
 boot().catch((e) => { console.error(e); toast('אין חיבור לשרת', true); });

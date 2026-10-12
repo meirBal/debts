@@ -7,8 +7,9 @@ const CDN = 'cdn.jsdelivr.net';                  // pinned supabase-js
 
 self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE)
   .then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())));
+// origin is shared with HomeApp: delete only this app's old caches
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys()
-  .then((ks) => Promise.all(ks.filter((k) => k.startsWith('debts-') && k !== CACHE).map((k) => caches.delete(k))))   // origin is shared with HomeApp: own caches only.then(() => self.clients.claim())));
+  .then((ks) => Promise.all(ks.filter((k) => k.startsWith('debts-') && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 
 // shell + pinned CDN: cache-first; everything else (Supabase API) goes to the network untouched
 self.addEventListener('fetch', (e) => {
