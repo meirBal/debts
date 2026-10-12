@@ -1,6 +1,6 @@
 // ===== APP — login, providers, check flow (ID → code → result), history, reminders =====
 import { h, toast, act, dialog, fmtDate, fmtMoney } from './ui.js';
-import { auth, householdOf, checks, provider } from './api.js';
+import { auth, householdOf, checks, refs, provider } from './api.js';
 import { PROVIDERS, CHECK_DAYS, REMIND_DAYS, validId, latest, status, attention, nextBill, googleCalendarUrl } from './providers.js';
 import { VERSION, APP_URL } from './config.js';
 
@@ -61,7 +61,8 @@ async function render() {
           await checks.markPaid(r.id); toast('סומן כשולם'); await render();
         }) }, 'שילמתי'),
         h('div', { class: 'row' },
-          h('a', { class: 'btn ghost', href: p.pay, target: '_blank', rel: 'noopener', 'aria-label': `לתשלום ${p.title}` }, 'לתשלום ↗'),
+          p.refs ? h('button', { class: 'ghost', 'aria-label': `לתשלום ${p.title}`, onclick: act(() => payWithRefs(p)) }, 'לתשלום ↗')
+            : h('a', { class: 'btn ghost', href: p.pay, target: '_blank', rel: 'noopener', 'aria-label': `לתשלום ${p.title}` }, 'לתשלום ↗'),
           p.area && h('a', { class: 'btn ghost', href: p.area, target: '_blank', rel: 'noopener', 'aria-label': `אזור אישי ${p.title}` }, 'אזור אישי ↗'),
           p.auto ? h('button', { 'aria-label': `בדוק ${p.title}`, onclick: () => askId(p) }, 'בדוק')
             : h('button', { 'aria-label': `עדכון ${p.title}`, onclick: () => askManual(p) }, 'עדכון')),
@@ -80,6 +81,25 @@ async function render() {
         h('a', { class: 'btn ghost', href: APP_URL.replace(/^https:/, 'webcal:') + 'reminders.ics' }, 'יומן אייפון'))),
     h('p', { class: 'hint' }, `גרסה ${VERSION} · מספר הזהות והקוד לא נשמרים בשרת · מומלץ לבדוק כל ${CHECK_DAYS} ימים`),
   ].filter(Boolean));
+}
+
+// ---- [Pay with reference numbers: copy, then open the official page] ----
+async function payWithRefs(p) {
+  const saved = new Map((await refs.list(S.hid)).filter((r) => r.provider === p.id).map((r) => [r.k, r.value]));
+  const row = (ref) => {
+    const inp = h('input', { value: saved.get(ref.k) || '', inputMode: 'numeric', dir: 'ltr', maxLength: 40, 'aria-label': ref.label });
+    return h('label', {}, h('span', {}, ref.label), h('div', { class: 'row' }, h('div', { class: 'grow' }, inp),
+      h('button', { type: 'button', onclick: act(async () => {
+        const v = inp.value.trim();
+        if (!v) throw new Error('אין מספר להעתקה');
+        if (v !== saved.get(ref.k)) { await refs.set(S.hid, p.id, ref.k, v); saved.set(ref.k, v); }   // edited → saved for the family
+        await navigator.clipboard.writeText(v); toast(`הועתק: ${v}`);
+      }) }, 'העתק')));
+  };
+  dialog(`${p.icon} תשלום ${p.title}`, h('div', { class: 'form' },
+    h('p', { class: 'hint' }, 'מעתיקים, ואז מדביקים באתר התשלום. מספר שהשתנה בחשבון — מתקנים כאן והוא נשמר.'),
+    ...p.refs.map(row)), [
+    h('a', { class: 'btn', href: p.pay, target: '_blank', rel: 'noopener' }, 'המשך לתשלום ↗')]);
 }
 
 // ---- [Manual providers: record what the official site shows] ----

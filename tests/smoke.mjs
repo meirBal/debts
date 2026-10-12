@@ -24,6 +24,7 @@ export const createClient = () => ({
   auth: { getSession: async () => ({ data: { session: db.session } }), signOut: async () => { db.session = null; },
     signInWithPassword: async ({ password }) => password === 'pw12345678' ? (db.session = { user: { id: 'u1' } }, { data: {}, error: null }) : { data: null, error: new Error('x') } },
   from: (t) => t === 'members' ? q([{ user_id: 'u1', household_id: 'h1' }])
+    : t === 'debt_refs' ? Object.assign(q([{ household_id: 'h1', provider: 'water', k: 'clearing', value: '111222333' }]), { upsert: (r) => { (db.refs ||= []).push(r); return Promise.resolve({ data: null, error: null }); } })
     : Object.assign(q(db.rows), { insert: (row) => { db.rows.unshift({ id: 'm' + db.rows.length, paid: false, created_at: new Date().toISOString(), ...row }); return Promise.resolve({ data: null, error: null }); } }),
   functions: { invoke: async (name, { body }) => {
     if (body.op === 'start') return { data: { flow: { st: 's', fid: 'f' }, via: 'sms' }, error: null };
@@ -71,8 +72,17 @@ await step('mark paid', async () => {
   if (/\bfalse\b|undefined/.test(await page.locator('#app').innerText())) throw new Error('stray false/undefined on screen');
 });
 await step('manual provider: direct payment link + record debt', async () => {
-  const pay = await page.getByRole('link', { name: 'לתשלום מים' }).getAttribute('href');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.getByRole('button', { name: 'לתשלום מים' }).click();
+  await page.getByRole('button', { name: 'העתק' }).first().click();
+  if (await page.evaluate(() => navigator.clipboard.readText()) !== '111222333') throw new Error('copy failed');
+  await page.getByRole('textbox', { name: "מס' כרטיס מים" }).fill('4455');
+  await page.getByRole('button', { name: 'העתק' }).last().click();
+  await page.getByText('הועתק: 4455').waitFor();
+  if (await page.evaluate(() => window.__db.refs?.[0]?.value) !== '4455') throw new Error('edit not saved');
+  const pay = await page.getByRole('link', { name: 'המשך לתשלום ↗' }).getAttribute('href');
   if (pay !== 'https://www.mast.co.il/55/payment') throw new Error(pay);
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'עדכון מים' }).click();
   await page.locator('dialog input[type=number]').fill('120.5');
   await page.locator('dialog input[type=date]').fill('2026-11-05');

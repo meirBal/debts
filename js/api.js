@@ -21,6 +21,12 @@ export const checks = {
   markPaid: (id) => sb.from('debt_checks').update({ paid: true }).eq('id', id).then(ok),
 };
 
+// payment reference numbers (family-shared, DB only)
+export const refs = {
+  list: (hid) => sb.from('debt_refs').select('provider, k, value').eq('household_id', hid).then(ok),
+  set: (hid, provider, k, value) => sb.from('debt_refs').upsert({ household_id: hid, provider, k, value, updated_at: new Date().toISOString() }).then(ok),
+};
+
 // edge function: {op:'start'|'verify', ...} — error body {error} is shown as is
 export async function provider(body) {
   const { data, error } = await sb.functions.invoke('debts', { body });
