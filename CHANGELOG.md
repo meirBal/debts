@@ -1,3 +1,7 @@
+## 1.3.2 — 2026-10-12
+- Fix: app can be installed on the home screen (service worker bug), install button inside the app
+- previous: v1.3.1 (rollback: scripts/rollback.sh 1.3.1)
+
 ## 1.3.1 — 2026-10-12
 - Water payment: stable numbers (payer, property, card) instead of the per-bill clearing number
 - previous: v1.3.0 (rollback: scripts/rollback.sh 1.3.0)

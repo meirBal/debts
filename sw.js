@@ -1,5 +1,5 @@
 // ===== SERVICE WORKER — offline app shell; cache name tied to VERSION so every release refreshes =====
-const VERSION = '1.3.1';
+const VERSION = '1.3.2';
 const CACHE = `debts-${VERSION}`;
 const SHELL = ['./', 'index.html', 'css/app.css', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/app.js', 'js/api.js', 'js/ui.js', 'js/providers.js', 'js/config.js'];
