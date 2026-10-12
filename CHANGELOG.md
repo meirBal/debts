@@ -1,3 +1,7 @@
+## 1.2.0 — 2026-10-12
+- Water, arnona and tuition: direct links to the official payment pages + quick manual update; payment link for electricity
+- previous: v1.1.0 (rollback: scripts/rollback.sh 1.1.0)
+
 ## 1.1.0 — 2026-10-12
 - Shows the estimated next electricity bill date when nothing is owed; last bill amount kept for analysis
 - previous: v1.0.0 (rollback: scripts/rollback.sh 1.0.0)
